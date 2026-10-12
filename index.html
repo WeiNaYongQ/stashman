@@ -1319,32 +1319,23 @@
       }
 
       function drawDamageTag(fighter) {
-        const tagWidth = 116;
-        const tagHeight = 34;
-        const tagX = fighter.x - tagWidth / 2;
-        const tagY = fighter.y - 137;
-        ctx.save();
-        ctx.globalAlpha = 0.92;
-        roundedRectPath(ctx, tagX, tagY, tagWidth, tagHeight, 10);
-        ctx.fillStyle = 'rgba(5, 13, 28, .91)';
-        ctx.fill();
-        ctx.strokeStyle = fighter.colors.body;
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        ctx.font = '800 11px Inter, system-ui, sans-serif';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = fighter.colors.bodyLight;
-        ctx.fillText(fighter.name, tagX + 10, tagY + 11);
         const damageScale = 1 + fighter.hurtPulse * 0.012;
-        ctx.translate(tagX + 91, tagY + 21);
+        const yOffset = Math.sin(simFrame * 0.08) * 2;
+        const damageText = Math.round(fighter.damage) + '%';
+        ctx.save();
+        ctx.translate(fighter.x, fighter.y - 120 + yOffset);
         ctx.scale(damageScale, damageScale);
         ctx.textAlign = 'center';
-        ctx.font = '900 18px Inter, system-ui, sans-serif';
+        ctx.textBaseline = 'middle';
+        ctx.font = '900 34px system-ui, sans-serif';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = 'rgba(4,6,14,0.95)';
         ctx.fillStyle = getDamageColor(fighter.damage);
-        ctx.shadowColor = ctx.fillStyle;
-        ctx.shadowBlur = fighter.hurtPulse > 0 ? 10 : 0;
-        ctx.fillText(Math.round(fighter.damage) + '%', 0, 0);
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.strokeText(damageText, 0, 0);
+        ctx.fillText(damageText, 0, 0);
         ctx.restore();
       }
 
