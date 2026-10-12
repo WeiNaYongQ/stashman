@@ -545,14 +545,18 @@
           }
 
           if (wasPressed(fighter.controls.jump)) {
-            const canJump = wasGrounded || fighter.jumpsUsed < 2;
-            if (canJump) {
-              const firstJump = wasGrounded || fighter.jumpsUsed === 0;
-              fighter.jumpsUsed = firstJump ? 1 : 2;
-              fighter.vy = firstJump ? JUMP_SPEED : DOUBLE_JUMP_SPEED;
+            if (wasGrounded) {
+              fighter.jumpsUsed = 1;
+              fighter.vy = JUMP_SPEED;
               fighter.grounded = false;
               fighter.jumpStretch = 1;
-              emitDust(fighter.x, fighter.y, fighter.colors.bodyLight, firstJump ? 7 : 4);
+              emitDust(fighter.x, fighter.y, fighter.colors.bodyLight, 7);
+            } else if (fighter.jumpsUsed < 2) {
+              fighter.jumpsUsed = 2;
+              fighter.vy = DOUBLE_JUMP_SPEED;
+              fighter.grounded = false;
+              fighter.jumpStretch = 1;
+              emitDust(fighter.x, fighter.y, fighter.colors.bodyLight, 4);
             }
           }
 
@@ -579,6 +583,9 @@
           fighter.jumpsUsed = 0;
           fighter.landSquash = clamp(Math.abs(landingSpeed) / 10, 0.25, 1.15);
           if (Math.abs(landingSpeed) > 3.2) emitDust(fighter.x, fighter.y, fighter.colors.bodyLight, 5);
+        } else if (wasGrounded && !wasPressed(fighter.controls.jump) && fighter.jumpsUsed === 0) {
+          // Leaving a platform without jumping still spends the ground jump.
+          fighter.jumpsUsed = 1;
         }
 
         if (Math.abs(fighter.vx) > 0.15) fighter.runPhase += Math.abs(fighter.vx) * 0.18;
