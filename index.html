@@ -84,7 +84,7 @@
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Chewy&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bangers&family=Chewy&family=Fredoka:wght@300..700&family=Inter:wght@400;700;800;900&family=Luckiest+Guy&display=swap" rel="stylesheet">
 </head>
 <body>
   <main id="game-shell" aria-label="Neon Ring local two-player platform fighter">
@@ -105,6 +105,8 @@
       // The entire match is simulated in fixed-size world units. Rendering can run faster
       // or slower without changing the outcome of a match.
       const STEP = 1 / 60;
+      // Match duration in seconds. Change this value to tune the round length.
+      const MATCH_TIME_SECONDS = 300;
       const MAX_FRAME_DELTA = 0.10;
       const MAX_STEPS_PER_FRAME = 5;
       const GRAVITY = 0.72;
@@ -207,6 +209,8 @@
       let matchFlash = 0;
       let gameOver = false;
       let winner = null;
+      let matchTimeRemaining = MATCH_TIME_SECONDS;
+      let timerExpired = false;
       let camera = {
         x: (STAGE.left + STAGE.right) / 2,
         y: 560,
@@ -344,6 +348,8 @@
         matchFlash = 0;
         gameOver = false;
         winner = null;
+        matchTimeRemaining = MATCH_TIME_SECONDS;
+        timerExpired = false;
         camera = {
           x: (STAGE.left + STAGE.right) / 2,
           y: 560,
@@ -823,6 +829,28 @@
         camera.y = lerp(camera.y, camera.targetY, 0.105);
       }
 
+      function endMatchByTimer() {
+        if (gameOver) return;
+
+        if (fighters[0].stocks > fighters[1].stocks) {
+          winner = fighters[0].id;
+        } else if (fighters[1].stocks > fighters[0].stocks) {
+          winner = fighters[1].id;
+        } else if (fighters[0].damage < fighters[1].damage) {
+          winner = fighters[0].id;
+        } else if (fighters[1].damage < fighters[0].damage) {
+          winner = fighters[1].id;
+        } else {
+          winner = null;
+        }
+
+        timerExpired = true;
+        gameOver = true;
+        freezeFrames = 0;
+        screenShake = Math.max(screenShake, 14);
+        matchFlash = 0.35;
+      }
+
       function updateGame() {
         simFrame += 1;
 
@@ -833,9 +861,13 @@
           return;
         }
 
+        matchTimeRemaining = Math.max(0, matchTimeRemaining - STEP);
+
         if (freezeFrames > 0) {
           freezeFrames -= 1;
+          if (matchTimeRemaining <= 0) endMatchByTimer();
           updateEffects();
+          updateCamera();
           pressedKeys.clear();
           return;
         }
@@ -843,6 +875,7 @@
         for (const fighter of fighters) updateFighter(fighter);
         resolveCombat();
         handleBlastZones();
+        if (!gameOver && matchTimeRemaining <= 0) endMatchByTimer();
         updateEffects();
         updateCamera();
         pressedKeys.clear();
@@ -1394,78 +1427,147 @@
       }
 
       function drawHud() {
-        const compact = viewWidth < 720;
-        const top = compact ? 13 : 20;
-        const BAR_WIDTH = viewWidth < 620 ? (viewWidth - 80) / 2 : 260;
-        const BAR_HEIGHT = 64;
-        const barY = viewHeight - 90;
-        const p1BarX = 30;
-        const p2BarX = viewWidth - 30 - BAR_WIDTH;
+        const scaleX = viewWidth / 1920;
+        const scaleY = viewHeight / 1080;
+        const textScale = Math.max(0.4, Math.min(scaleX, scaleY));
+        const shapeScale = Math.min(scaleX, scaleY);
 
-        const drawBottomBar = (fighter, barX, mirrored) => {
-          const pfpX = mirrored ? barX + BAR_WIDTH - 48 : barX;
-          const pfpY = barY + (BAR_HEIGHT - 48) / 2;
-          const centerY = barY + BAR_HEIGHT / 2;
-
+        const drawCircleElement = (element) => {
           ctx.save();
-          roundedRectPath(ctx, barX, barY, BAR_WIDTH, BAR_HEIGHT, 12);
-          ctx.fillStyle = 'rgba(7, 16, 31, 0.78)';
-          ctx.fill();
-          ctx.strokeStyle = fighter.colors.body;
-          ctx.lineWidth = 2;
-          ctx.stroke();
-
-          // placeholder — replace with real pfp image in Phase 2
-          roundedRectPath(ctx, pfpX, pfpY, 48, 48, 8);
-          ctx.fillStyle = fighter.colors.body;
-          ctx.fill();
-          ctx.fillStyle = fighter.colors.accent;
           ctx.beginPath();
-          ctx.arc(pfpX + 24, pfpY + 24, 8, 0, Math.PI * 2);
+          ctx.ellipse(
+            (element.x + element.width / 2) * scaleX,
+            (element.y + element.height / 2) * scaleY,
+            element.width * scaleX / 2,
+            element.height * scaleY / 2,
+            0,
+            0,
+            Math.PI * 2
+          );
+          ctx.fillStyle = element.fill;
           ctx.fill();
-
-          ctx.textBaseline = 'middle';
-          ctx.font = 'bold 18px Inter, system-ui, sans-serif';
-          ctx.fillStyle = fighter.colors.bodyLight;
-          ctx.textAlign = mirrored ? 'right' : 'left';
-          ctx.fillText(fighter.name, mirrored ? barX + BAR_WIDTH - 58 : barX + 58, centerY);
-          ctx.restore();
-
-          drawStockPips(fighter, mirrored ? barX + BAR_WIDTH - 130 : barX + 130, centerY, 5);
-
-          const damageScale = 1 + fighter.hurtPulse * 0.012;
-          const yOffset = Math.sin(simFrame * 0.08) * 2;
-          const damageText = Math.round(fighter.damage).toString();
-          ctx.save();
-          ctx.translate(barX + BAR_WIDTH / 2, barY - 42 + yOffset);
-          ctx.scale(damageScale, damageScale);
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.font = '52px Chewy, "Comic Sans MS", cursive';
-          ctx.fillStyle = getDamageColor(fighter.damage);
-          ctx.shadowColor = 'rgba(4,6,14,0.85)';
-          ctx.shadowBlur = 6;
-          ctx.shadowOffsetY = 3;
-          ctx.fillText(damageText, 0, 0);
+          if (element.borderWidth > 0) {
+            ctx.strokeStyle = element.borderColor;
+            ctx.lineWidth = element.borderWidth * shapeScale;
+            ctx.stroke();
+          }
           ctx.restore();
         };
 
-        drawBottomBar(fighters[0], p1BarX, false);
-        drawBottomBar(fighters[1], p2BarX, true);
+        const drawPolygonElement = (element) => {
+          ctx.save();
+          ctx.beginPath();
+          element.points.forEach((point, index) => {
+            const localX = element.flipX ? element.width - point.x : point.x;
+            const localY = element.flipY ? element.height - point.y : point.y;
+            const screenX = (element.x + localX) * scaleX;
+            const screenY = (element.y + localY) * scaleY;
+            if (index === 0) ctx.moveTo(screenX, screenY);
+            else ctx.lineTo(screenX, screenY);
+          });
+          ctx.closePath();
+          ctx.fillStyle = element.fill;
+          ctx.fill();
+          if (element.borderWidth > 0) {
+            ctx.strokeStyle = element.borderColor;
+            ctx.lineWidth = element.borderWidth * shapeScale;
+            ctx.stroke();
+          }
+          ctx.restore();
+        };
 
-        ctx.textBaseline = 'middle';
-        const centerWidth = compact ? 0 : 226;
-        if (centerWidth > 0) {
-          const centerX = (viewWidth - centerWidth) / 2;
-          drawPanel(centerX, top + 5, centerWidth, 55, 'rgba(189, 169, 255, .30)');
-          ctx.textAlign = 'center';
-          ctx.fillStyle = COLORS.white;
-          ctx.font = '1000 16px Inter, system-ui, sans-serif';
-          ctx.fillText('NEON RING', viewWidth / 2, top + 25);
-          ctx.fillStyle = COLORS.muted;
-          ctx.font = '800 10px Inter, system-ui, sans-serif';
-          ctx.fillText('LOCAL DUEL  •  FIRST TO EMPTY STOCKS', viewWidth / 2, top + 44);
-        }
+        const drawTextElement = (element, text = element.text, color = element.color) => {
+          ctx.save();
+          const textX = element.textAlign === 'center'
+            ? (element.x + element.width / 2) * scaleX
+            : element.textAlign === 'right'
+              ? (element.x + element.width) * scaleX
+              : element.x * scaleX;
+          const textY = (element.y + element.height / 2) * scaleY;
+          const fontFamily = element.fontFamily === 'Luckiest Guy' ? '"Luckiest Guy"' : element.fontFamily;
+          ctx.textAlign = element.textAlign;
+          ctx.textBaseline = 'middle';
+          ctx.font = (element.fontSize * textScale) + 'px ' + fontFamily + ', sans-serif';
+          ctx.fillStyle = color;
+          ctx.fillText(String(text), textX, textY);
+          ctx.restore();
+        };
+
+        const remainingSeconds = Math.max(0, Math.ceil(matchTimeRemaining));
+        const timerText = Math.floor(remainingSeconds / 60) + ':' + String(remainingSeconds % 60).padStart(2, '0');
+
+        // el-18 — hero pfp p2
+        drawCircleElement({ x: 1560, y: 790, width: 180, height: 190, fill: '#ffffff', borderColor: '#000000', borderWidth: 5 });
+        // el-17 — hero pfp p1
+        drawCircleElement({ x: 180, y: 790, width: 180, height: 190, fill: '#ffffff', borderColor: '#000000', borderWidth: 5 });
+        // el-9 — shadow of P2 HUD BAR
+        drawPolygonElement({
+          flipX: true,
+          x: 1052,
+          y: 940,
+          width: 635,
+          height: 191,
+          points: [{ x: 610, y: -11 }, { x: 11, y: 5 }, { x: 39, y: 71 }, { x: 741, y: 71 }],
+          fill: '#000000',
+          borderWidth: 0
+        });
+        // el-3 — P2 HUD BAR
+        drawPolygonElement({
+          flipX: true,
+          x: 1080,
+          y: 910,
+          width: 500,
+          height: 191,
+          points: [{ x: 481, y: -11 }, { x: 9, y: 5 }, { x: 30, y: 71 }, { x: 584, y: 71 }],
+          fill: '#ffffff',
+          borderColor: '#000000',
+          borderWidth: 5
+        });
+        // el-8 — shadow of P1 HUD BAR
+        drawPolygonElement({
+          x: 233,
+          y: 940,
+          width: 635,
+          height: 191,
+          points: [{ x: 25, y: -11 }, { x: 624, y: 5 }, { x: 596, y: 71 }, { x: -106, y: 71 }],
+          fill: '#000000',
+          borderWidth: 0
+        });
+        // el-2 — P1 HUD BAR
+        drawPolygonElement({
+          x: 340,
+          y: 910,
+          width: 500,
+          height: 191,
+          points: [{ x: 19, y: -11 }, { x: 491, y: 5 }, { x: 470, y: 71 }, { x: -84, y: 71 }],
+          fill: '#ffffff',
+          borderColor: '#000000',
+          borderWidth: 5
+        });
+        // el-4 — P1
+        drawTextElement({ x: 160, y: 870, width: 500, height: 150, text: 'P1', fontFamily: 'Bangers', fontSize: 97, textAlign: 'center', color: '#000000' });
+        // el-7 — P2
+        drawTextElement({ x: 1250, y: 870, width: 500, height: 150, text: 'P2', fontFamily: 'Bangers', fontSize: 97, textAlign: 'center', color: '#000000' });
+        // el-13 — P1 dmg
+        drawTextElement({ x: 550, y: 770, width: 420, height: 220, text: '00%', fontFamily: 'Chewy', fontSize: 70, textAlign: 'center', color: '#ffffff' }, Math.round(fighters[0].damage).toString(), getDamageColor(fighters[0].damage));
+        // el-14 — P2 dmg
+        drawTextElement({ x: 950, y: 770, width: 420, height: 220, text: '00%', fontFamily: 'Chewy', fontSize: 70, textAlign: 'center', color: '#ffffff' }, Math.round(fighters[1].damage).toString(), getDamageColor(fighters[1].damage));
+        // el-16 — P1 playername
+        drawTextElement({ x: 290, y: 960, width: 430, height: 110, text: 'playername', fontFamily: 'Luckiest Guy', fontSize: 50, textAlign: 'center', color: '#efffff' }, fighters[0].name);
+        // el-19 — P2 playername
+        drawTextElement({ x: 1200, y: 960, width: 430, height: 110, text: 'playername', fontFamily: 'Luckiest Guy', fontSize: 50, textAlign: 'center', color: '#efffff' }, fighters[1].name);
+        // el-20 — P1 red side stock box
+        drawCircleElement({ x: -90, y: -120, width: 220, height: 260, fill: '#b30000', borderColor: '#000000', borderWidth: 5 });
+        // el-21 — timerbox
+        drawCircleElement({ x: 740, y: -180, width: 440, height: 250, fill: '#ffffff', borderColor: '#000000', borderWidth: 5 });
+        // el-22 — timer
+        drawTextElement({ x: 740, y: -53, width: 430, height: 160, text: '0:00', fontFamily: 'Bangers', fontSize: 64, textAlign: 'center', color: '#000000' }, timerText);
+        // el-24 — stock P1
+        drawTextElement({ x: -70, y: 10, width: 240, height: 110, text: '3', fontFamily: 'Bangers', fontSize: 78, textAlign: 'center', color: '#efffff' }, fighters[0].stocks);
+        // el-25 — P2 blue side stock box
+        drawCircleElement({ x: 1790, y: -120, width: 220, height: 260, fill: '#1b007a', borderColor: '#000000', borderWidth: 5 });
+        // el-26 — stock P2
+        drawTextElement({ x: 1750, y: 10, width: 240, height: 110, text: '3', fontFamily: 'Bangers', fontSize: 78, textAlign: 'center', color: '#efffff' }, fighters[1].stocks);
 
         if (gameOver) drawWinnerOverlay();
       }
@@ -1487,11 +1589,11 @@
         ctx.fillText('MATCH COMPLETE', viewWidth / 2, panelY + 50);
         ctx.fillStyle = COLORS.white;
         ctx.font = '1000 ' + (viewWidth < 520 ? 34 : 48) + 'px Inter, system-ui, sans-serif';
-        const title = winner === null ? 'DOUBLE KO' : fighters[winner].name + ' WINS';
+        const title = timerExpired && winner === null ? 'DRAW' : winner === null ? 'DOUBLE KO' : fighters[winner].name + ' WINS';
         ctx.fillText(title, viewWidth / 2, panelY + panelHeight * 0.47);
         ctx.fillStyle = '#a9bfd1';
         ctx.font = '700 13px Inter, system-ui, sans-serif';
-        ctx.fillText(winner === null ? 'Nobody left standing.' : 'Last one standing.', viewWidth / 2, panelY + panelHeight * 0.66);
+        ctx.fillText(timerExpired ? 'TIME LIMIT REACHED' : winner === null ? 'Nobody left standing.' : 'Last one standing.', viewWidth / 2, panelY + panelHeight * 0.66);
         roundedRectPath(ctx, viewWidth / 2 - 110, panelY + panelHeight - 61, 220, 36, 10);
         ctx.fillStyle = 'rgba(55, 225, 209, .14)';
         ctx.fill();
@@ -1558,3 +1660,22 @@
   </script>
 </body>
 </html>
+
+<!--
+Verification report
+
+| Step | Expected | Actual | Pass/Fail |
+| --- | --- | --- | --- |
+| 1 | JavaScript parses and loads | Extracted script passed node --check; mocked Canvas runtime loaded without exceptions | Pass |
+| 2 | No console errors on load | Mocked runtime loaded and rendered frames without runtime errors | Pass |
+| 3 | HUD renders all designed layers and dynamic content | All 18 JSON elements are rendered in array order with virtual-canvas scaling; runtime observed P1/P2 labels, damage, names, timer, and stock text | Pass |
+| 4 | Timer counts from 5:00 to 0:00 | Runtime stepped through 300 seconds; timer displayed 5:00 initially and 0:00 at expiry | Pass |
+| 5 | Timer expiry uses stock and damage tiebreakers | Targeted runtime checks returned stock winner, lower-damage winner, and winner=null with DRAW for a complete tie | Pass |
+| 6 | HUD damage updates and follows getDamageColor() | Damage text and color are read from fighters and getDamageColor() during every drawHud() call | Pass |
+| 7 | HUD stock numbers update | Stock text is read from fighters[0].stocks and fighters[1].stocks during every drawHud() call | Pass |
+| 8 | Player names display correctly | Runtime observed LUMEN and RIOT from the fighter state | Pass |
+| 9 | Old title panel and control hint are absent | drawHud() contains neither the old NEON RING panel nor the bottom control-hint render | Pass |
+| 10 | In-world floating damage remains unchanged | drawDamageTag() was left unchanged; only HUD/timer/font-loading code was modified | Pass |
+
+Known limitations: No graphical headless-browser binary is available in this sandbox, so pixel-level screenshot inspection was not possible. Runtime verification used node --check plus a mocked Canvas 2D environment and targeted timer checks.
+-->
