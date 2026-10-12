@@ -1395,37 +1395,65 @@
 
       function drawHud() {
         const compact = viewWidth < 720;
-        const cardWidth = compact ? Math.min(188, viewWidth * 0.42) : 278;
-        const cardHeight = compact ? 66 : 78;
-        const sidePad = compact ? 12 : 24;
         const top = compact ? 13 : 20;
-        const rightX = viewWidth - sidePad - cardWidth;
+        const BAR_WIDTH = viewWidth < 620 ? (viewWidth - 80) / 2 : 260;
+        const BAR_HEIGHT = 64;
+        const barY = viewHeight - 90;
+        const p1BarX = 30;
+        const p2BarX = viewWidth - 30 - BAR_WIDTH;
 
-        drawPanel(sidePad, top, cardWidth, cardHeight, 'rgba(55, 225, 209, .42)');
-        drawPanel(rightX, top, cardWidth, cardHeight, 'rgba(255, 111, 124, .42)');
+        const drawBottomBar = (fighter, barX, mirrored) => {
+          const pfpX = mirrored ? barX + BAR_WIDTH - 48 : barX;
+          const pfpY = barY + (BAR_HEIGHT - 48) / 2;
+          const centerY = barY + BAR_HEIGHT / 2;
+
+          ctx.save();
+          roundedRectPath(ctx, barX, barY, BAR_WIDTH, BAR_HEIGHT, 12);
+          ctx.fillStyle = 'rgba(7, 16, 31, 0.78)';
+          ctx.fill();
+          ctx.strokeStyle = fighter.colors.body;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // placeholder — replace with real pfp image in Phase 2
+          roundedRectPath(ctx, pfpX, pfpY, 48, 48, 8);
+          ctx.fillStyle = fighter.colors.body;
+          ctx.fill();
+          ctx.fillStyle = fighter.colors.accent;
+          ctx.beginPath();
+          ctx.arc(pfpX + 24, pfpY + 24, 8, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.textBaseline = 'middle';
+          ctx.font = 'bold 18px Inter, system-ui, sans-serif';
+          ctx.fillStyle = fighter.colors.bodyLight;
+          ctx.textAlign = mirrored ? 'right' : 'left';
+          ctx.fillText(fighter.name, mirrored ? barX + BAR_WIDTH - 58 : barX + 58, centerY);
+          ctx.restore();
+
+          drawStockPips(fighter, mirrored ? barX + BAR_WIDTH - 130 : barX + 130, centerY, 5);
+
+          const damageScale = 1 + fighter.hurtPulse * 0.012;
+          const yOffset = Math.sin(simFrame * 0.08) * 2;
+          const damageText = Math.round(fighter.damage).toString();
+          ctx.save();
+          ctx.translate(barX + BAR_WIDTH / 2, barY - 42 + yOffset);
+          ctx.scale(damageScale, damageScale);
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.font = '52px Chewy, "Comic Sans MS", cursive';
+          ctx.fillStyle = getDamageColor(fighter.damage);
+          ctx.shadowColor = 'rgba(4,6,14,0.85)';
+          ctx.shadowBlur = 6;
+          ctx.shadowOffsetY = 3;
+          ctx.fillText(damageText, 0, 0);
+          ctx.restore();
+        };
+
+        drawBottomBar(fighters[0], p1BarX, false);
+        drawBottomBar(fighters[1], p2BarX, true);
 
         ctx.textBaseline = 'middle';
-        ctx.textAlign = 'left';
-        ctx.font = compact ? '900 12px Inter, system-ui, sans-serif' : '900 14px Inter, system-ui, sans-serif';
-        ctx.fillStyle = fighters[0].colors.bodyLight;
-        ctx.fillText('P1  ' + fighters[0].name, sidePad + 17, top + 19);
-        ctx.fillStyle = fighters[1].colors.bodyLight;
-        ctx.fillText('P2  ' + fighters[1].name, rightX + 17, top + 19);
-
-        ctx.font = compact ? '800 10px Inter, system-ui, sans-serif' : '800 11px Inter, system-ui, sans-serif';
-        ctx.fillStyle = COLORS.muted;
-        ctx.fillText('STOCKS', sidePad + 17, top + cardHeight - 18);
-        ctx.fillText('STOCKS', rightX + 17, top + cardHeight - 18);
-        drawStockPips(fighters[0], sidePad + (compact ? 68 : 75), top + cardHeight - 18, compact ? 5 : 6);
-        drawStockPips(fighters[1], rightX + (compact ? 68 : 75), top + cardHeight - 18, compact ? 5 : 6);
-
-        ctx.textAlign = 'right';
-        ctx.font = compact ? '900 19px Inter, system-ui, sans-serif' : '900 25px Inter, system-ui, sans-serif';
-        ctx.fillStyle = getDamageColor(fighters[0].damage);
-        ctx.fillText(Math.round(fighters[0].damage) + '%', sidePad + cardWidth - 16, top + 22);
-        ctx.fillStyle = getDamageColor(fighters[1].damage);
-        ctx.fillText(Math.round(fighters[1].damage) + '%', rightX + cardWidth - 16, top + 22);
-
         const centerWidth = compact ? 0 : 226;
         if (centerWidth > 0) {
           const centerX = (viewWidth - centerWidth) / 2;
@@ -1438,18 +1466,6 @@
           ctx.font = '800 10px Inter, system-ui, sans-serif';
           ctx.fillText('LOCAL DUEL  •  FIRST TO EMPTY STOCKS', viewWidth / 2, top + 44);
         }
-
-        ctx.save();
-        ctx.globalAlpha = compact ? 0.72 : 0.85;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#b4cadd';
-        ctx.font = compact ? '700 10px Inter, system-ui, sans-serif' : '700 12px Inter, system-ui, sans-serif';
-        const controlText = compact
-          ? 'P1 A / D · W · F     P2 ← / → · ↑ · /'
-          : 'P1  A / D move   W jump   F attack     •     P2  ← / → move   ↑ jump   / attack';
-        ctx.fillText(controlText, viewWidth / 2, viewHeight - (compact ? 18 : 24));
-        ctx.restore();
 
         if (gameOver) drawWinnerOverlay();
       }
