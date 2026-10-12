@@ -107,9 +107,6 @@
       const STEP = 1 / 60;
       // Match duration in seconds. Change this value to tune the round length.
       const MATCH_TIME_SECONDS = 300;
-      // Global scale multiplier for the HUD. 1.0 = design size.
-      // Lower values (e.g. 0.78) make the HUD smaller.
-      const HUD_SCALE = 0.78;
       const MAX_FRAME_DELTA = 0.10;
       const MAX_STEPS_PER_FRAME = 5;
       const GRAVITY = 0.72;
@@ -1430,25 +1427,19 @@
       }
 
       function drawHud() {
-        const scaleX = (viewWidth / 1920) * HUD_SCALE;
-        const scaleY = (viewHeight / 1080) * HUD_SCALE;
-        const hudOffsetX = (viewWidth - viewWidth * HUD_SCALE) / 2;
-        const hudOffsetY = (viewHeight - viewHeight * HUD_SCALE) / 2;
+        const scaleX = viewWidth / 1920;
+        const scaleY = viewHeight / 1080;
         const textScale = Math.max(0.4, Math.min(scaleX, scaleY));
         const shapeScale = Math.min(scaleX, scaleY);
 
         const drawCircleElement = (element) => {
           ctx.save();
           ctx.beginPath();
-          const screenCenterX = (element.x + element.width / 2) * scaleX + hudOffsetX;
-          const screenCenterY = (element.y + element.height / 2) * scaleY + hudOffsetY;
-          const radiusX = element.width * scaleX / 2;
-          const radiusY = element.height * scaleY / 2;
           ctx.ellipse(
-            screenCenterX,
-            screenCenterY,
-            radiusX,
-            radiusY,
+            (element.x + element.width / 2) * scaleX,
+            (element.y + element.height / 2) * scaleY,
+            element.width * scaleX / 2,
+            element.height * scaleY / 2,
             0,
             0,
             Math.PI * 2
@@ -1469,8 +1460,8 @@
           element.points.forEach((point, index) => {
             const localX = point.x;
             const localY = point.y;
-            const screenX = (element.x + localX) * scaleX + hudOffsetX;
-            const screenY = (element.y + localY) * scaleY + hudOffsetY;
+            const screenX = (element.x + localX) * scaleX;
+            const screenY = (element.y + localY) * scaleY;
             if (index === 0) ctx.moveTo(screenX, screenY);
             else ctx.lineTo(screenX, screenY);
           });
@@ -1485,20 +1476,30 @@
           ctx.restore();
         };
 
-        const drawTextElement = (element, text = element.text, color = element.color) => {
+        const drawTextElement = (element, text = element.text, color = element.color, withShadow = false) => {
           ctx.save();
           const textX = element.textAlign === 'center'
-            ? (element.x + element.width / 2) * scaleX + hudOffsetX
+            ? (element.x + element.width / 2) * scaleX
             : element.textAlign === 'right'
-              ? (element.x + element.width) * scaleX + hudOffsetX
-              : element.x * scaleX + hudOffsetX;
-          const textY = (element.y + element.height / 2) * scaleY + hudOffsetY;
+              ? (element.x + element.width) * scaleX
+              : element.x * scaleX;
+          const textY = (element.y + element.height / 2) * scaleY;
           const fontFamily = element.fontFamily === 'Luckiest Guy' ? '"Luckiest Guy"' : element.fontFamily;
           ctx.textAlign = element.textAlign;
           ctx.textBaseline = 'middle';
           ctx.font = (element.fontSize * textScale) + 'px ' + fontFamily + ', sans-serif';
           ctx.fillStyle = color;
+          if (withShadow) {
+            ctx.shadowColor = 'rgba(4, 6, 14, 0.85)';
+            ctx.shadowBlur = 6;
+            ctx.shadowOffsetY = 3;
+          }
           ctx.fillText(String(text), textX, textY);
+          if (withShadow) {
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+          }
           ctx.restore();
         };
 
@@ -1512,22 +1513,22 @@
         // el-9 — shadow of P2 HUD BAR
         drawPolygonElement({
           flipX: true,
-          x: 1052,
-          y: 940,
-          width: 635,
-          height: 191,
-          points: [{ x: 610, y: -11 }, { x: 11, y: 5 }, { x: 39, y: 71 }, { x: 741, y: 71 }],
+          x: 1154,
+          y: 1010,
+          width: 533,
+          height: 150,
+          points: [{ x: 512, y: -9 }, { x: 9, y: 4 }, { x: 33, y: 56 }, { x: 622, y: 56 }],
           fill: '#000000',
           borderWidth: 0
         });
         // el-3 — P2 HUD BAR
         drawPolygonElement({
           flipX: true,
-          x: 1080,
-          y: 910,
-          width: 500,
-          height: 191,
-          points: [{ x: 481, y: -11 }, { x: 9, y: 5 }, { x: 30, y: 71 }, { x: 584, y: 71 }],
+          x: 1160,
+          y: 985,
+          width: 420,
+          height: 150,
+          points: [{ x: 404, y: -9 }, { x: 8, y: 4 }, { x: 25, y: 56 }, { x: 491, y: 56 }],
           fill: '#ffffff',
           borderColor: '#000000',
           borderWidth: 5
@@ -1535,20 +1536,20 @@
         // el-8 — shadow of P1 HUD BAR
         drawPolygonElement({
           x: 233,
-          y: 940,
-          width: 635,
-          height: 191,
-          points: [{ x: 25, y: -11 }, { x: 624, y: 5 }, { x: 596, y: 71 }, { x: -106, y: 71 }],
+          y: 1010,
+          width: 533,
+          height: 150,
+          points: [{ x: 21, y: -9 }, { x: 524, y: 4 }, { x: 501, y: 56 }, { x: -89, y: 56 }],
           fill: '#000000',
           borderWidth: 0
         });
         // el-2 — P1 HUD BAR
         drawPolygonElement({
           x: 340,
-          y: 910,
-          width: 500,
-          height: 191,
-          points: [{ x: 19, y: -11 }, { x: 491, y: 5 }, { x: 470, y: 71 }, { x: -84, y: 71 }],
+          y: 985,
+          width: 420,
+          height: 150,
+          points: [{ x: 16, y: -9 }, { x: 412, y: 4 }, { x: 395, y: 56 }, { x: -71, y: 56 }],
           fill: '#ffffff',
           borderColor: '#000000',
           borderWidth: 5
@@ -1558,9 +1559,9 @@
         // el-7 — P2
         drawTextElement({ x: 1250, y: 870, width: 500, height: 150, text: 'P2', fontFamily: 'Bangers', fontSize: 97, textAlign: 'center', color: '#000000' });
         // el-13 — P1 dmg
-        drawTextElement({ x: 550, y: 770, width: 420, height: 220, text: '00%', fontFamily: 'Chewy', fontSize: 70, textAlign: 'center', color: '#ffffff' }, Math.round(fighters[0].damage).toString(), getDamageColor(fighters[0].damage));
+        drawTextElement({ x: 550, y: 770, width: 420, height: 220, text: '00%', fontFamily: 'Chewy', fontSize: 70, textAlign: 'center', color: '#ffffff' }, Math.round(fighters[0].damage).toString(), getDamageColor(fighters[0].damage), true);
         // el-14 — P2 dmg
-        drawTextElement({ x: 950, y: 770, width: 420, height: 220, text: '00%', fontFamily: 'Chewy', fontSize: 70, textAlign: 'center', color: '#ffffff' }, Math.round(fighters[1].damage).toString(), getDamageColor(fighters[1].damage));
+        drawTextElement({ x: 950, y: 770, width: 420, height: 220, text: '00%', fontFamily: 'Chewy', fontSize: 70, textAlign: 'center', color: '#ffffff' }, Math.round(fighters[1].damage).toString(), getDamageColor(fighters[1].damage), true);
         // el-16 — P1 playername
         drawTextElement({ x: 290, y: 960, width: 430, height: 110, text: 'playername', fontFamily: 'Luckiest Guy', fontSize: 50, textAlign: 'center', color: '#efffff' }, fighters[0].name);
         // el-19 — P2 playername
@@ -1676,10 +1677,12 @@ Verification report
 | Step | Expected | Actual | Pass/Fail |
 | --- | --- | --- | --- |
 | 1 | JavaScript parses | Extracted script passed node --check | Pass |
-| 2 | Polygon orientation is correct | drawPolygonElement() uses stored point.x and point.y directly; flipX and flipY remain in the design objects but are unused | Pass |
-| 3 | HUD is smaller and centered | HUD_SCALE is 0.78; all design positions use the scaled axes plus hudOffsetX/hudOffsetY, while the winner overlay remains full-screen | Pass |
-| 4 | HUD values remain live | Timer, damage, stocks, and fighter names still read live match state; timer and tiebreaker runtime checks pass | Pass |
-| 5 | Other gameplay/render systems are unchanged | Diff is limited to HUD_SCALE, drawHud() coordinate/orientation handling, and this verification comment; in-world damage remains unchanged | Pass |
+| 2 | The global HUD multiplier and offsets are fully removed | No global HUD multiplier or coordinate-offset references remain in executable code | Pass |
+| 3 | HUD bars are smaller, lower, and mirrored | P1/P2 bars and shadows use the requested 420/533 widths, 150 heights, y positions, and mirrored x positions; all other design elements retain their JSON values | Pass |
+| 4 | Timer and stock circles return to full size | Circle and text helpers use the original unoffset scale formulas; timer and stock circle elements are unchanged | Pass |
+| 5 | HUD damage numbers have a soft shadow | drawTextElement() supports withShadow and el-13/el-14 pass true with the requested shadow values | Pass |
+| 6 | In-world damage number is unchanged | drawDamageTag() is unchanged | Pass |
+| 7 | No other function is modified | Diff is limited to the HUD constant removal, drawHud(), and this verification comment | Pass |
 
-Known limitations: No graphical headless-browser binary is available in this sandbox, so pixel-level screenshot inspection was not possible. Verification used node --check, a mocked Canvas 2D runtime, and targeted timer/tiebreaker checks.
+Known limitations: No graphical headless-browser binary is available in this sandbox, so pixel-level screenshot inspection was not possible. Verification used node --check and a mocked Canvas 2D runtime.
 -->
