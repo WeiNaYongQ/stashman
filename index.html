@@ -82,6 +82,9 @@
       text-align: center;
     }
   </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
 </head>
 <body>
   <main id="game-shell" aria-label="Neon Ring local two-player platform fighter">
@@ -1321,13 +1324,13 @@
       function drawDamageTag(fighter) {
         const damageScale = 1 + fighter.hurtPulse * 0.012;
         const yOffset = Math.sin(simFrame * 0.08) * 2;
-        const damageText = Math.round(fighter.damage) + '%';
+        const damageText = Math.round(fighter.damage).toString();
         ctx.save();
         ctx.translate(fighter.x, fighter.y - 120 + yOffset);
         ctx.scale(damageScale, damageScale);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.font = '900 34px system-ui, sans-serif';
+        ctx.font = '46px Anton, Impact, "Arial Black", sans-serif';
         ctx.lineJoin = 'round';
         ctx.lineWidth = 5;
         ctx.strokeStyle = 'rgba(4,6,14,0.95)';
