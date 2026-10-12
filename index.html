@@ -1086,10 +1086,11 @@
       }
 
       function getDamageColor(damage) {
+        if (damage >= 150) return '#ff4d4d';
         if (damage >= 100) return '#ff6f7c';
         if (damage >= 60) return '#ffb169';
-        if (damage >= 30) return '#f8dc6a';
-        return '#b8fff2';
+        if (damage >= 30) return '#ffd866';
+        return '#efffff';
       }
 
       function drawFighter(fighter) {
