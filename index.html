@@ -107,6 +107,9 @@
       const STEP = 1 / 60;
       // Match duration in seconds. Change this value to tune the round length.
       const MATCH_TIME_SECONDS = 300;
+      // Global scale multiplier for the HUD. 1.0 = design size.
+      // Lower values (e.g. 0.78) make the HUD smaller.
+      const HUD_SCALE = 0.78;
       const MAX_FRAME_DELTA = 0.10;
       const MAX_STEPS_PER_FRAME = 5;
       const GRAVITY = 0.72;
@@ -1427,19 +1430,25 @@
       }
 
       function drawHud() {
-        const scaleX = viewWidth / 1920;
-        const scaleY = viewHeight / 1080;
+        const scaleX = (viewWidth / 1920) * HUD_SCALE;
+        const scaleY = (viewHeight / 1080) * HUD_SCALE;
+        const hudOffsetX = (viewWidth - viewWidth * HUD_SCALE) / 2;
+        const hudOffsetY = (viewHeight - viewHeight * HUD_SCALE) / 2;
         const textScale = Math.max(0.4, Math.min(scaleX, scaleY));
         const shapeScale = Math.min(scaleX, scaleY);
 
         const drawCircleElement = (element) => {
           ctx.save();
           ctx.beginPath();
+          const screenCenterX = (element.x + element.width / 2) * scaleX + hudOffsetX;
+          const screenCenterY = (element.y + element.height / 2) * scaleY + hudOffsetY;
+          const radiusX = element.width * scaleX / 2;
+          const radiusY = element.height * scaleY / 2;
           ctx.ellipse(
-            (element.x + element.width / 2) * scaleX,
-            (element.y + element.height / 2) * scaleY,
-            element.width * scaleX / 2,
-            element.height * scaleY / 2,
+            screenCenterX,
+            screenCenterY,
+            radiusX,
+            radiusY,
             0,
             0,
             Math.PI * 2
@@ -1458,10 +1467,10 @@
           ctx.save();
           ctx.beginPath();
           element.points.forEach((point, index) => {
-            const localX = element.flipX ? element.width - point.x : point.x;
-            const localY = element.flipY ? element.height - point.y : point.y;
-            const screenX = (element.x + localX) * scaleX;
-            const screenY = (element.y + localY) * scaleY;
+            const localX = point.x;
+            const localY = point.y;
+            const screenX = (element.x + localX) * scaleX + hudOffsetX;
+            const screenY = (element.y + localY) * scaleY + hudOffsetY;
             if (index === 0) ctx.moveTo(screenX, screenY);
             else ctx.lineTo(screenX, screenY);
           });
@@ -1479,11 +1488,11 @@
         const drawTextElement = (element, text = element.text, color = element.color) => {
           ctx.save();
           const textX = element.textAlign === 'center'
-            ? (element.x + element.width / 2) * scaleX
+            ? (element.x + element.width / 2) * scaleX + hudOffsetX
             : element.textAlign === 'right'
-              ? (element.x + element.width) * scaleX
-              : element.x * scaleX;
-          const textY = (element.y + element.height / 2) * scaleY;
+              ? (element.x + element.width) * scaleX + hudOffsetX
+              : element.x * scaleX + hudOffsetX;
+          const textY = (element.y + element.height / 2) * scaleY + hudOffsetY;
           const fontFamily = element.fontFamily === 'Luckiest Guy' ? '"Luckiest Guy"' : element.fontFamily;
           ctx.textAlign = element.textAlign;
           ctx.textBaseline = 'middle';
@@ -1666,16 +1675,11 @@ Verification report
 
 | Step | Expected | Actual | Pass/Fail |
 | --- | --- | --- | --- |
-| 1 | JavaScript parses and loads | Extracted script passed node --check; mocked Canvas runtime loaded without exceptions | Pass |
-| 2 | No console errors on load | Mocked runtime loaded and rendered frames without runtime errors | Pass |
-| 3 | HUD renders all designed layers and dynamic content | All 18 JSON elements are rendered in array order with virtual-canvas scaling; runtime observed P1/P2 labels, damage, names, timer, and stock text | Pass |
-| 4 | Timer counts from 5:00 to 0:00 | Runtime stepped through 300 seconds; timer displayed 5:00 initially and 0:00 at expiry | Pass |
-| 5 | Timer expiry uses stock and damage tiebreakers | Targeted runtime checks returned stock winner, lower-damage winner, and winner=null with DRAW for a complete tie | Pass |
-| 6 | HUD damage updates and follows getDamageColor() | Damage text and color are read from fighters and getDamageColor() during every drawHud() call | Pass |
-| 7 | HUD stock numbers update | Stock text is read from fighters[0].stocks and fighters[1].stocks during every drawHud() call | Pass |
-| 8 | Player names display correctly | Runtime observed LUMEN and RIOT from the fighter state | Pass |
-| 9 | Old title panel and control hint are absent | drawHud() contains neither the old NEON RING panel nor the bottom control-hint render | Pass |
-| 10 | In-world floating damage remains unchanged | drawDamageTag() was left unchanged; only HUD/timer/font-loading code was modified | Pass |
+| 1 | JavaScript parses | Extracted script passed node --check | Pass |
+| 2 | Polygon orientation is correct | drawPolygonElement() uses stored point.x and point.y directly; flipX and flipY remain in the design objects but are unused | Pass |
+| 3 | HUD is smaller and centered | HUD_SCALE is 0.78; all design positions use the scaled axes plus hudOffsetX/hudOffsetY, while the winner overlay remains full-screen | Pass |
+| 4 | HUD values remain live | Timer, damage, stocks, and fighter names still read live match state; timer and tiebreaker runtime checks pass | Pass |
+| 5 | Other gameplay/render systems are unchanged | Diff is limited to HUD_SCALE, drawHud() coordinate/orientation handling, and this verification comment; in-world damage remains unchanged | Pass |
 
-Known limitations: No graphical headless-browser binary is available in this sandbox, so pixel-level screenshot inspection was not possible. Runtime verification used node --check plus a mocked Canvas 2D environment and targeted timer checks.
+Known limitations: No graphical headless-browser binary is available in this sandbox, so pixel-level screenshot inspection was not possible. Verification used node --check, a mocked Canvas 2D runtime, and targeted timer/tiebreaker checks.
 -->
