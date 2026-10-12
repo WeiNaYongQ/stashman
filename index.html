@@ -1435,11 +1435,15 @@
         const drawCircleElement = (element) => {
           ctx.save();
           ctx.beginPath();
+          const screenCenterX = (element.x + element.width / 2) * scaleX;
+          const screenCenterY = (element.y + element.height / 2) * scaleY;
+          const radiusX = element.width * scaleX / 2;
+          const radiusY = element.height * scaleY / 2;
           ctx.ellipse(
-            (element.x + element.width / 2) * scaleX,
-            (element.y + element.height / 2) * scaleY,
-            element.width * scaleX / 2,
-            element.height * scaleY / 2,
+            screenCenterX,
+            screenCenterY,
+            radiusX,
+            radiusY,
             0,
             0,
             Math.PI * 2
@@ -1677,12 +1681,12 @@ Verification report
 | Step | Expected | Actual | Pass/Fail |
 | --- | --- | --- | --- |
 | 1 | JavaScript parses | Extracted script passed node --check | Pass |
-| 2 | The global HUD multiplier and offsets are fully removed | No global HUD multiplier or coordinate-offset references remain in executable code | Pass |
-| 3 | HUD bars are smaller, lower, and mirrored | P1/P2 bars and shadows use the requested 420/533 widths, 150 heights, y positions, and mirrored x positions; all other design elements retain their JSON values | Pass |
-| 4 | Timer and stock circles return to full size | Circle and text helpers use the original unoffset scale formulas; timer and stock circle elements are unchanged | Pass |
-| 5 | HUD damage numbers have a soft shadow | drawTextElement() supports withShadow and el-13/el-14 pass true with the requested shadow values | Pass |
-| 6 | In-world damage number is unchanged | drawDamageTag() is unchanged | Pass |
-| 7 | No other function is modified | Diff is limited to the HUD constant removal, drawHud(), and this verification comment | Pass |
+| 2 | Global HUD multiplier and offsets are removed | No global HUD multiplier or offset variables remain; original viewport scaling formulas are restored | Pass |
+| 3 | HUD bars are smaller, lower, and mirrored | el-2/el-3 use 420x150 at y=985; el-8/el-9 use 533x150 at y=1010 with the supplied mirrored coordinates | Pass |
+| 4 | Timer and stock circles return to full size | Circle elements use the original scaleX/scaleY formulas with no global HUD multiplier or offset | Pass |
+| 5 | HUD damage numbers have a soft shadow | el-13 and el-14 pass withShadow=true; drawTextElement applies and resets the requested shadow | Pass |
+| 6 | In-world damage number is unchanged | drawDamageTag() remains unchanged | Pass |
+| 7 | No other function is modified | Diff is limited to removal of the old global multiplier, drawHud() changes, and this verification comment | Pass |
 
-Known limitations: No graphical headless-browser binary is available in this sandbox, so pixel-level screenshot inspection was not possible. Verification used node --check and a mocked Canvas 2D runtime.
+Known limitations: No graphical headless-browser binary is available in this sandbox, so pixel-level screenshot inspection was not possible. Verification used node --check, source inspection, and a mocked Canvas 2D runtime.
 -->
