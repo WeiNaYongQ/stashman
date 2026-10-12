@@ -84,7 +84,7 @@
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Chewy&display=swap" rel="stylesheet">
 </head>
 <body>
   <main id="game-shell" aria-label="Neon Ring local two-player platform fighter">
@@ -1330,14 +1330,11 @@
         ctx.scale(damageScale, damageScale);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.font = '46px Anton, Impact, "Arial Black", sans-serif';
-        ctx.lineJoin = 'round';
-        ctx.lineWidth = 5;
-        ctx.strokeStyle = 'rgba(4,6,14,0.95)';
+        ctx.font = '52px Chewy, "Comic Sans MS", cursive';
         ctx.fillStyle = getDamageColor(fighter.damage);
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.strokeText(damageText, 0, 0);
+        ctx.shadowColor = 'rgba(4, 6, 14, 0.85)';
+        ctx.shadowBlur = 6;
+        ctx.shadowOffsetY = 3;
         ctx.fillText(damageText, 0, 0);
         ctx.restore();
       }
